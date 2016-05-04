@@ -1,0 +1,51 @@
+{
+  "plugins": ["esformatter-literal-notation",
+              "esformatter-quotes",
+              "esformatter-semicolons",
+              "esformatter-var-each",
+              "esformatter-dot-notation",
+              "esformatter-remove-trailing-commas"],
+
+  "indent": {
+    "value": "  "
+  },
+
+  "quotes": {
+    "type": "double",
+    "avoidEscape": true
+  },
+
+  "lineBreak": {
+      "value": "\r\n",
+
+      "before": {
+        "EndOfFile": 1
+      }
+  },
+
+  "collapseObjects": {
+    "ObjectExpression": {
+      "maxLineLength": 120,
+      "maxKeys": 1
+    }
+  },
+
+  "whiteSpace": {
+    "value": " ",
+    "removeTrailing": 1,
+
+    "before": {
+      "CallExpressionClosingParentheses": 0,
+      "ObjectExpressionClosingBrace": 1,
+      "ObjectPatternClosingBrace": 1,
+      "PropertyName": 1
+    },
+
+    "after" : {
+
+      "ObjectExpressionOpeningBrace": 1,
+      "ObjectPatternOpeningBrace": 1,
+      "PropertyName": 1
+    }
+  }
+}
