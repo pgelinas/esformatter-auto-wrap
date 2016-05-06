@@ -68,11 +68,31 @@ var config = {
       return node.elements.length === 0 || node.elements.length === 1;
     },
     nextElement : nextElementOn("elements")
+  },
+  BinaryExpression : {
+    wrappingStrategy : wrapWhenNecessary,
+    unwrap : (node) => {
+      _lb.limitBefore(node.left.startToken, 0);
+      _lb.limitAfter(node.left.endToken, 0);
+      _lb.limitBefore(node.right.startToken, 0);
+      _lb.limitAfter(node.right.endToken, 0);
+    },
+    nextElement : (node, element) => {
+      if(element !== undefined){
+        var parent = element.parent;
+        return parent.right === element ? parent.parent.right : parent.right;
+      }
+      element = node.left;
+      while(element.left !== undefined){
+        element = element.left;
+      }
+      return element;
+    }
   }
 };
 
 function wrapNode(node) {
-  if (!(node.type in config) || config[node.type].skip(node)) {
+  if (!(node.type in config) || (config[node.type].skip !== undefined && config[node.type].skip(node))) {
     return;
   }
 
@@ -80,7 +100,8 @@ function wrapNode(node) {
   var endOfTheLine = _tk.findNext(node.startToken, _tk.isBr);
 
   // Quick check for line length.
-  if (endOfTheLine.range[1] - startOfTheLine.range[0] <= options.maxLineLength) {
+  // endOfTheLine.range === undefined means a lineBreak was added by rocambole. Either this plugin or something else.
+  if (endOfTheLine.range === undefined || endOfTheLine.range[1] - startOfTheLine.range[0] <= options.maxLineLength) {
     return;
   }
 
