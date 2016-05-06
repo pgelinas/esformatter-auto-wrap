@@ -6,10 +6,10 @@ var esformatter = require('esformatter');
 var fs = require('fs');
 var autoWrap = require('../');
 var expect = require('chai').expect;
+var implementedTypes = ['FunctionExpression', 'ArrayExpression'];
 
-
-describe('compare input/output', function() {
-  beforeEach(function() {
+describe('compare input/output', () => {
+  beforeEach(()  => {
     esformatter.register(autoWrap);
     this.config = {
       preset: 'default',
@@ -21,8 +21,8 @@ describe('compare input/output', function() {
       }
     };
   });
-  for (var type of ['FunctionExpression']) {
-    it(type, function() {
+  for (var type of implementedTypes) {
+    it(type, () => {
       var input = getFile('input-' + type + '.js');
       var output = esformatter.format(input, this.config);
       var outputFile = getFile( 'output-' + type + '.js');

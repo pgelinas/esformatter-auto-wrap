@@ -64,7 +64,7 @@ var config = {
       collapseAll(node, "elements");
     },
     skip : function(node) {
-      return node.elements.length === 0;
+      return node.elements.length === 0 || node.elements.length === 1;
     },
     nextElement : nextElementOn("elements")
   }
