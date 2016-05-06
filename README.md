@@ -36,7 +36,8 @@ and modified in your .esformatter config:
 
 {
   "autoWrap": {
-    "maxLineLength": 120
+    "maxLineLength": 120,
+    "eclipseCompatible": true
   }
 }
 
@@ -44,6 +45,11 @@ and modified in your .esformatter config:
 
 ### maxLineLength (int)
 The maximum lenght a line is allowed to be before being wrapped onto the next line.
+
+### eclipseCompatible (boolean)
+Eclipse's JSDT formatter has some funky rules for formatting Javascript code. With this setting active, autoWrap
+attempts to be compatible with Eclipse's rules (avoiding merge conflicts and such).
+
 
 ## JavaScript API
 

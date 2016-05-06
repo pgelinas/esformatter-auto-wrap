@@ -9,7 +9,8 @@ var _indent = require("rocambole-indent");
 
 var options;
 var defaultOptions = {
-  maxLineLength : 120
+  maxLineLength : 120,
+  eclipseCompatible : true
 };
 
 module.exports = {
@@ -113,13 +114,36 @@ function wrapWhenNecessary(node, token, currentIndentLevel) {
   var nextElement = config[node.type].nextElement;
   var argument = nextElement(node);
   while (argument !== undefined) {
-    // If the previous token is an Indent, then it means the element is the first on the line
-    // and that it was probably already wrapped, can't do anything more about it, so skip it.
-    if (token.range[0] <= argument.endToken.range[0] && argument.startToken.prev.type !== "Indent") {
+    if (token.range[0] <= argument.endToken.range[0]) {
+      // If the previous token is an Indent, then it means the element is the first on the line
+      // and that it was probably already wrapped
+      if (argument.startToken.prev.type === "Indent") {
+        // Eclipse's formatter decides in this case that everyting should be wrapped...
+        if (options.eclipseCompatible) {
+          return alwaysWrap(node, token, currentIndentLevel);
+        // But the right decision would be to skip the element; instead wrap the next one and continue on.
+        } else {
+          argument = nextElement(node, argument);
+          continue;
+        }
+      }
       return wrapAndIndent(argument, currentIndentLevel);
     }
     argument = nextElement(node, argument);
   }
+}
+
+function alwaysWrap(node, token, currentIndentLevel) {
+  var nextElement = config[node.type].nextElement;
+  var element = nextElement(node);
+  var lastToken;
+  while (element !== undefined) {
+    if (element.startToken.prev.type !== "Indent") {
+      lastToken = wrapAndIndent(element, currentIndentLevel);
+    }
+    element = nextElement(node, element);
+  }
+  return lastToken;
 }
 
 function wrapAndIndent(node, currentIndentLevel) {

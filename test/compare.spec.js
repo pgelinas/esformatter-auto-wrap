@@ -17,7 +17,8 @@ describe('compare input/output', () => {
         value: "\r\n"
       },
       autoWrap: {
-        maxLineLength: 40
+        maxLineLength: 40,
+        eclipseCompatible: false
       }
     };
   });
@@ -29,6 +30,20 @@ describe('compare input/output', () => {
       expect(output).to.eql(outputFile);
     });
   }
+  describe('eclipse compatibility', () => {
+    beforeEach(() => {
+      this.config.autoWrap.eclipseCompatible = true;
+    });
+
+    for (var type of implementedTypes) {
+      it(type, () => {
+        var input = getFile('input-' + type + '.js');
+        var output = esformatter.format(input, this.config);
+        var outputFile = getFile( 'output-eclipse-' + type + '.js');
+        expect(output).to.eql(outputFile);
+      });
+    }
+  });
 });
 
 function getFile(name) {
