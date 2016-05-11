@@ -14,20 +14,20 @@ var defaultOptions = {
 };
 
 module.exports = {
-  setOptions : function(opts) {
+  setOptions : (opts) => {
     options = defaults(opts.autoWrap || {}, defaultOptions);
     _ws.setOptions(opts && opts.whiteSpace);
     _lb.setOptions(opts && opts.lineBreak);
     _indent.setOptions(opts && opts.indent);
   },
 
-  nodeBefore : function(node) {
+  nodeBefore : (node) => {
     if (node.type in config) {
       config[node.type].unwrap(node);
     }
   },
 
-  transformAfter : function(ast) {
+  transformAfter : (ast) => {
     rocambole.walk(ast, wrapNode);
   }
 };
@@ -51,20 +51,20 @@ function nextElementOn(property) {
 var config = {
   CallExpression : {
     wrappingStrategy : wrapWhenNecessary,
-    unwrap : function(node) {
+    unwrap : (node) => {
       collapseAll(node, "arguments");
     },
-    skip : function(node) {
+    skip : (node) => {
       return node.arguments.length === 0 || node.arguments.length === 1;
     },
     nextElement : nextElementOn("arguments")
   },
   ArrayExpression : {
     wrappingStrategy : wrapWhenNecessary,
-    unwrap : function(node) {
+    unwrap : (node) => {
       collapseAll(node, "elements");
     },
-    skip : function(node) {
+    skip : (node) => {
       return node.elements.length === 0 || node.elements.length === 1;
     },
     nextElement : nextElementOn("elements")
@@ -76,6 +76,9 @@ var config = {
       _lb.limitAfter(node.left.endToken, 0);
       _lb.limitBefore(node.right.startToken, 0);
       _lb.limitAfter(node.right.endToken, 0);
+    },
+    skip : (node) => {
+      return node.parent.type === "BinaryExpression";
     },
     nextElement : (node, element) => {
       if(element !== undefined){
