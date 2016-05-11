@@ -6,7 +6,7 @@ var esformatter = require('esformatter');
 var fs = require('fs');
 var autoWrap = require('../');
 var expect = require('chai').expect;
-var implementedTypes = ['FunctionExpression', 'ArrayExpression', 'BinaryExpression'];
+var implementedTypes = ['CallExpression', 'ArrayExpression', 'BinaryExpression', 'FunctionExpression'];
 
 describe('compare input/output', () => {
   beforeEach(function() {

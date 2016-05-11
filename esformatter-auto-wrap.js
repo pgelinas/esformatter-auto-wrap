@@ -59,6 +59,16 @@ var config = {
     },
     nextElement : nextElementOn("arguments")
   },
+  FunctionExpression : {
+    wrappingStrategy : wrapWhenNecessary,
+    unwrap : (node) => {
+      collapseAll(node, "params");
+    },
+    skip : (node) => {
+      return node.params.length === 0 || node.params.length === 1;
+    },
+    nextElement : nextElementOn("params")
+  },
   ArrayExpression : {
     wrappingStrategy : wrapWhenNecessary,
     unwrap : (node) => {
@@ -81,12 +91,12 @@ var config = {
       return node.parent.type === "BinaryExpression";
     },
     nextElement : (node, element) => {
-      if(element !== undefined){
+      if (element !== undefined) {
         var parent = element.parent;
         return parent.right === element ? parent.parent.right : parent.right;
       }
       element = node.left;
-      while(element.left !== undefined){
+      while (element.left !== undefined) {
         element = element.left;
       }
       return element;
@@ -104,7 +114,11 @@ function wrapNode(node) {
 
   // Quick check for line length.
   // endOfTheLine.range === undefined means a lineBreak was added by rocambole. Either this plugin or something else.
-  if (endOfTheLine.range === undefined || endOfTheLine.range[1] - startOfTheLine.range[0] <= options.maxLineLength) {
+  if (
+                                                                                                            endOfTheLine.range ===
+      undefined ||
+      startOfTheLine.range === undefined ||
+      endOfTheLine.range[1] - startOfTheLine.range[0] <= options.maxLineLength) {
     return;
   }
 
@@ -116,6 +130,7 @@ function wrapNode(node) {
   // TODO handle comments?
   var length = 0;
   var currentToken = startOfTheLine;
+  var lastWrap;
   while (currentToken.next != endOfTheLine) {
     length += currentToken.value.length;
     if (length > options.maxLineLength) {
@@ -127,33 +142,42 @@ function wrapNode(node) {
         break;
       }
       currentToken = config[node.type].wrappingStrategy(node, currentToken, currentIndentLevel);
+      lastWrap = currentToken;
       if (currentToken === undefined) break;
       length = 0;
     }
     currentToken = currentToken.next;
   }
+  return lastWrap;
 }
 
 function wrapWhenNecessary(node, token, currentIndentLevel) {
   var nextElement = config[node.type].nextElement;
   var argument = nextElement(node);
+  var prev;
   while (argument !== undefined) {
     if (token.range[0] <= argument.endToken.range[0]) {
       // If the previous token is an Indent, then it means the element is the first on the line
       // and that it was probably already wrapped
-      if (argument.startToken.prev.type === "Indent") {
-        // Eclipse's formatter decides in this case that everyting should be wrapped...
-        if (options.eclipseCompatible) {
-          return alwaysWrap(node, token, currentIndentLevel);
-        // But the right decision would be to skip the element; instead wrap the next one and continue on.
-        } else {
-          argument = nextElement(node, argument);
-          continue;
-        }
+      if (argument.startToken.prev.type !== "Indent") {
+        return wrapAndIndent(argument, currentIndentLevel);
+      // Eclipse's formatter decides in this case that everyting should be wrapped...
+      // But the right decision would be to skip the element; instead wrap the next one and continue on.
+      } else if (options.eclipseCompatible) {
+        return alwaysWrap(node, token, currentIndentLevel);
       }
-      return wrapAndIndent(argument, currentIndentLevel);
     }
+
+    prev = argument;
     argument = nextElement(node, argument);
+    if (argument !== undefined &&
+      options.eclipseCompatible && token.range[0] < argument.startToken.range[0]) {
+      return wrapAndIndent(prev, currentIndentLevel);
+    }
+  }
+  // If we're at the end of the node's "wrappable" elements, then Eclipse would wrap the last element.
+  if (options.eclipseCompatible) {
+    return wrapAndIndent(prev, currentIndentLevel);
   }
 }
 
@@ -171,6 +195,10 @@ function alwaysWrap(node, token, currentIndentLevel) {
 }
 
 function wrapAndIndent(node, currentIndentLevel) {
+  if (node.type in config) {
+    if (wrapNode(node)) return;
+  }
+  debug("Wrapping node of type %s on next line", node.type);
   _lb.limitBefore(node.startToken, 1);
   var newLine = _tk.findPrev(node.startToken, _tk.isBr);
   _indent.inBetween(newLine, node.endToken.next, currentIndentLevel + 2);
