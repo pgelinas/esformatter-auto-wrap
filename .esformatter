@@ -4,7 +4,8 @@
               "esformatter-semicolons",
               "esformatter-var-each",
               "esformatter-dot-notation",
-              "esformatter-remove-trailing-commas"],
+              "esformatter-remove-trailing-commas",
+              "esformatter-auto-wrap"],
 
   "indent": {
     "value": "  "
