@@ -1,4 +1,7 @@
-// jshint esversion: 6
+/* jshint esversion: 6 */
+/* global require, module */
+
+'use strict';
 var defaults = require("defaults-deep");
 var debug = require("debug")("esformatter:autoWrap");
 var rocambole = require("rocambole");
@@ -131,7 +134,7 @@ function wrapNode(node) {
   while (currentToken.next != endOfTheLine) {
     length += currentToken.value.length;
     if (length > options.maxLineLength) {
-      debug("Line length exceed %s at %s.", options.maxLineLength, currentToken.value);
+      debug("Line length exceed %s at %s (%s).", options.maxLineLength, currentToken.value, currentToken.type);
       // If the current token is an Indent, then it means that whatever we do the line is too long...
       // abort wrapping at this point.
       if (currentToken.type === "Indent") {
@@ -163,7 +166,7 @@ function wrapWhenNecessary(node, token, currentIndentLevel) {
       // If the previous token is an Indent, then it means the element is the first on the line
       // and that it was probably already wrapped
       if (argument.startToken.prev.type !== "Indent") {
-        return wrapAndIndent(argument, currentIndentLevel);
+        return wrapAndIndent(argument, token, currentIndentLevel);
       // Eclipse's formatter decides in this case that everyting should be wrapped...
       // But the right decision would be to skip the element; instead wrap the next one and continue on.
       } else if (options.eclipseCompatible) {
@@ -175,12 +178,12 @@ function wrapWhenNecessary(node, token, currentIndentLevel) {
     argument = nextElement(node, argument);
     if (argument !== undefined &&
       options.eclipseCompatible && token.range[0] < argument.startToken.range[0]) {
-      return wrapAndIndent(prev, currentIndentLevel);
+      return wrapAndIndent(prev, token, currentIndentLevel);
     }
   }
   // If we're at the end of the node's "wrappable" elements, then Eclipse would wrap the last element.
   if (options.eclipseCompatible) {
-    return wrapAndIndent(prev, currentIndentLevel);
+    return wrapAndIndent(prev, token, currentIndentLevel);
   }
 }
 
@@ -190,15 +193,15 @@ function alwaysWrap(node, token, currentIndentLevel) {
   var lastToken;
   while (element !== undefined) {
     if (element.startToken.prev.type !== "Indent") {
-      lastToken = wrapAndIndent(element, currentIndentLevel);
+      lastToken = wrapAndIndent(element, token, currentIndentLevel);
     }
     element = nextElement(node, element);
   }
   return lastToken;
 }
 
-function wrapAndIndent(node, currentIndentLevel) {
-  if (node.type in config) {
+function wrapAndIndent(node, token, currentIndentLevel) {
+  if (token.range[0] > node.startToken.range[0] && node.type in config) {
     if (wrapNode(node)) return;
   }
   debug("Wrapping node of type %s on next line", node.type);

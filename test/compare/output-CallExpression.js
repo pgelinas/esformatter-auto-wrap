@@ -13,3 +13,5 @@ function foobar() {
 foobar("Multiple", "ArgumentCornerCase1");
 foobar("Skipped", "Arg",
     bar("RecursiveWrap"));
+longFunctionName("ThisArgument",
+    function(Wrap, onNext) {});
