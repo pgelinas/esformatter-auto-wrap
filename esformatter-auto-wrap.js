@@ -152,6 +152,12 @@ function wrapNode(node) {
 }
 
 function wrapWhenNecessary(node, token, currentIndentLevel) {
+  // range can be undefined in case of Whitespace added by esformatter.
+  // Skip to next valid token, should only skip one or two token, nothing to screw formatting (hopefully).
+  while(token.range === undefined) {
+    token = token.next;
+  }
+
   var nextElement = config[node.type].nextElement;
   var argument = nextElement(node);
   var prev;
