@@ -113,12 +113,9 @@ function wrapNode(node) {
   var endOfTheLine = _tk.findNext(node.startToken, _tk.isBr);
 
   // Quick check for line length.
-  // endOfTheLine.range === undefined means a lineBreak was added by rocambole. Either this plugin or something else.
-  if (
-                                                                                                            endOfTheLine.range ===
-      undefined ||
-      startOfTheLine.range === undefined ||
-      endOfTheLine.range[1] - startOfTheLine.range[0] <= options.maxLineLength) {
+  // range === undefined means a the token was added by code (not part of original input). Avoid for now.
+  if (endOfTheLine.range === undefined || startOfTheLine.range === undefined || endOfTheLine.range[1] -
+      startOfTheLine.range[0] <= options.maxLineLength) {
     return;
   }
 
