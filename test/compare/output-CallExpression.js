@@ -10,8 +10,10 @@ function foobar() {
     foobar("SOMETHING");
   };
 }
-foobar("Multiple", "ArgumentCornerCase1");
+foobar("Multiple", "ArgumentCornerCase");
 foobar("Skipped", "Arg",
     bar("RecursiveWrap"));
 longFunctionName("ThisArgument",
+    function(Wrap, onNext) {});
+longFunctionName("CornerCase",
     function(Wrap, onNext) {});

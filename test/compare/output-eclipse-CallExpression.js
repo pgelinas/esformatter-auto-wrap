@@ -12,8 +12,10 @@ function foobar() {
   };
 }
 foobar("Multiple",
-    "ArgumentCornerCase1");
+    "ArgumentCornerCase");
 foobar("Skipped", "Arg",
     bar("RecursiveWrap"));
 longFunctionName("ThisArgument",
+    function(Wrap, onNext) {});
+longFunctionName("CornerCase",
     function(Wrap, onNext) {});

@@ -133,7 +133,7 @@ function wrapNode(node) {
   var lastWrap;
   while (currentToken.next != endOfTheLine) {
     length += currentToken.value.length;
-    if (length > options.maxLineLength) {
+    if (length >= options.maxLineLength) {
       debug("Line length exceed %s at %s (%s).", options.maxLineLength, currentToken.value, currentToken.type);
       // If the current token is an Indent, then it means that whatever we do the line is too long...
       // abort wrapping at this point.
@@ -154,7 +154,7 @@ function wrapNode(node) {
 function wrapWhenNecessary(node, token, currentIndentLevel) {
   // range can be undefined in case of Whitespace added by esformatter.
   // Skip to next valid token, should only skip one or two token, nothing to screw formatting (hopefully).
-  while(token.range === undefined) {
+  while(token.range === undefined || token.type === "WhiteSpace") {
     token = token.next;
   }
 
@@ -201,8 +201,11 @@ function alwaysWrap(node, token, currentIndentLevel) {
 }
 
 function wrapAndIndent(node, token, currentIndentLevel) {
-  if (token.range[0] > node.startToken.range[0] && node.type in config) {
-    if (wrapNode(node)) return;
+  if (node.type in config) {
+    var firstElement = config[node.type].nextElement(node);
+    if(token.range[0] >= firstElement.startToken.range[0]){
+      if (wrapNode(node)) return;
+    }
   }
   debug("Wrapping node of type %s on next line", node.type);
   _lb.limitBefore(node.startToken, 1);
