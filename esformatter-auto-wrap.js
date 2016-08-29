@@ -1,7 +1,7 @@
 /* jshint esversion: 6 */
 /* global require, module */
 
-'use strict';
+"use strict";
 var defaults = require("defaults-deep");
 var debug = require("debug")("esformatter:autoWrap");
 var rocambole = require("rocambole");
@@ -51,6 +51,25 @@ function nextElementOn(property) {
   };
 }
 
+function unwrapLeftRight(node) {
+  _lb.limitBefore(node.left.startToken, 0);
+  _lb.limitAfter(node.left.endToken, 0);
+  _lb.limitBefore(node.right.startToken, 0);
+  _lb.limitAfter(node.right.endToken, 0);
+}
+
+function nextRightElement(node, element) {
+  if (element !== undefined) {
+    var parent = element.parent;
+    return parent.right === element ? parent.parent.right : parent.right;
+  }
+  element = node.left;
+  while (element.left !== undefined) {
+    element = element.left;
+  }
+  return element;
+}
+
 var config = {
   CallExpression : {
     wrappingStrategy : wrapWhenNecessary,
@@ -84,26 +103,19 @@ var config = {
   },
   BinaryExpression : {
     wrappingStrategy : wrapWhenNecessary,
-    unwrap : (node) => {
-      _lb.limitBefore(node.left.startToken, 0);
-      _lb.limitAfter(node.left.endToken, 0);
-      _lb.limitBefore(node.right.startToken, 0);
-      _lb.limitAfter(node.right.endToken, 0);
-    },
+    unwrap : unwrapLeftRight,
     skip : (node) => {
       return node.parent.type === "BinaryExpression";
     },
-    nextElement : (node, element) => {
-      if (element !== undefined) {
-        var parent = element.parent;
-        return parent.right === element ? parent.parent.right : parent.right;
-      }
-      element = node.left;
-      while (element.left !== undefined) {
-        element = element.left;
-      }
-      return element;
-    }
+    nextElement : nextRightElement
+  },
+  LogicalExpression : {
+    wrappingStrategy : wrapWhenNecessary,
+    unwrap : unwrapLeftRight,
+    skip : (node) => {
+      return node.parent.type === "LogicalExpression";
+    },
+    nextElement : nextRightElement
   }
 };
 
@@ -111,17 +123,19 @@ function wrapNode(node) {
   if (!(node.type in config) || (config[node.type].skip !== undefined && config[node.type].skip(node))) {
     return;
   }
+  debug("WrapNode %s with parent %s.", node.type, node.parent.type);
 
   var startOfTheLine = findStartOfLine(node.startToken);
   var endOfTheLine = _tk.findNext(node.startToken, _tk.isBr);
 
   // Quick check for line length.
   // range === undefined means a the token was added by code (not part of original input). Avoid for now.
-  if (endOfTheLine.range === undefined || startOfTheLine.range === undefined || endOfTheLine.range[1] -
+  if (endOfTheLine.range !== undefined && startOfTheLine.range !== undefined && endOfTheLine.range[1] -
       startOfTheLine.range[0] <= options.maxLineLength) {
     return;
   }
 
+  debug("Line possibly too long based on range.");
   var currentIndentLevel = 0;
   if (_tk.isIndent(startOfTheLine)) {
     currentIndentLevel = startOfTheLine.level;
@@ -131,12 +145,13 @@ function wrapNode(node) {
   var length = 0;
   var currentToken = startOfTheLine;
   var lastWrap;
-  while (currentToken.next != endOfTheLine) {
+  debug("EndToken %s", node.endToken.range[0]);
+  while (currentToken.next !== endOfTheLine && !(node.parent.type in config && currentToken === node.endToken.next)) {
     length += currentToken.value.length;
     if (length >= options.maxLineLength) {
       debug("Line length exceed %s at %s (%s).", options.maxLineLength, currentToken.value, currentToken.type);
       // If the current token is an Indent, then it means that whatever we do the line is too long...
-      // abort wrapping at this point.
+      // abort wrapping at this point. Kind of an infinite loop safeguard.
       if (currentToken.type === "Indent") {
         debug("Hit a line that was too long with its indent... don't bother!");
         break;
@@ -148,13 +163,15 @@ function wrapNode(node) {
     }
     currentToken = currentToken.next;
   }
+  debug("End wrapNode %s", node.type);
   return lastWrap;
 }
 
 function wrapWhenNecessary(node, token, currentIndentLevel) {
+  debug("wrapWhenNecessary %s", node.type);
   // range can be undefined in case of Whitespace added by esformatter.
   // Skip to next valid token, should only skip one or two token, nothing to screw formatting (hopefully).
-  while(token.range === undefined || token.type === "WhiteSpace") {
+  while (token.range === undefined || token.type === "WhiteSpace") {
     token = token.next;
   }
 
@@ -176,13 +193,13 @@ function wrapWhenNecessary(node, token, currentIndentLevel) {
 
     prev = argument;
     argument = nextElement(node, argument);
-    if (argument !== undefined &&
-      options.eclipseCompatible && token.range[0] < argument.startToken.range[0]) {
+    if (argument !== undefined && options.eclipseCompatible && token.range[0] < argument.startToken.range[0]) {
       return wrapAndIndent(prev, token, currentIndentLevel);
     }
   }
   // If we're at the end of the node's "wrappable" elements, then Eclipse would wrap the last element.
-  if (options.eclipseCompatible) {
+  // Well..... except for if, because reasons....
+  if (options.eclipseCompatible && node.parent.type !== "IfStatement") {
     return wrapAndIndent(prev, token, currentIndentLevel);
   }
 }
@@ -200,17 +217,32 @@ function alwaysWrap(node, token, currentIndentLevel) {
   return lastToken;
 }
 
-function wrapAndIndent(node, token, currentIndentLevel) {
+function tryRecursiveWrap(node, token) {
   if (node.type in config) {
     var firstElement = config[node.type].nextElement(node);
-    if(token.range[0] >= firstElement.startToken.range[0]){
-      if (wrapNode(node)) return;
+    if (token.range[0] >= firstElement.startToken.range[0]) {
+      debug("Trying recursive wrapping.");
+      return wrapNode(node);
     }
+  }
+}
+
+function wrapAndIndent(node, token, currentIndentLevel) {
+  // LogicalExpression have precedence over their children when wrapping code. Except in Eclipse...
+  var isParentPrecedence = !options.eclipseCompatible && node.parent.type === "LogicalExpression";
+  var recursiveResult;
+  if (!isParentPrecedence) {
+    recursiveResult = tryRecursiveWrap(node, token);
+    if (recursiveResult !== undefined) return recursiveResult;
   }
   debug("Wrapping node of type %s on next line", node.type);
   _lb.limitBefore(node.startToken, 1);
   var newLine = _tk.findPrev(node.startToken, _tk.isBr);
   _indent.inBetween(newLine, node.endToken.next, currentIndentLevel + 2);
+  if (isParentPrecedence) {
+    recursiveResult = tryRecursiveWrap(node, token);
+    if (recursiveResult !== undefined) return recursiveResult;
+  }
   return newLine;
 }
 

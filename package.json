@@ -1,6 +1,6 @@
 {
   "name": "esformatter-auto-wrap",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "esformatter plugin: automagically wraps line when they are over a configurable length",
   "main": "esformatter-auto-wrap.js",
   "scripts": {
