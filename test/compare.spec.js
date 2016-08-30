@@ -24,9 +24,11 @@ describe("compare input/output", () => {
     };
   });
 
-  for (var type of implementedTypes) {
-    it(type, test(type));
-  }
+  describe("wrap when necessary", function() {
+    for (var type of implementedTypes) {
+      it(type, wrapWhenNecessaryTest(type));
+    }
+  });
 
   describe("eclipse compatibility", function() {
     beforeEach(function() {
@@ -35,6 +37,12 @@ describe("compare input/output", () => {
 
     for (var type of implementedTypes) {
       it(type, eclipseTest(type));
+    }
+  });
+
+  describe("always wrap", function() {
+    for (var type of implementedTypes) {
+      it(type, alwaysWrapTest(type));
     }
   });
 });
@@ -48,19 +56,34 @@ function getFile(name) {
   }
 }
 
-function test(type) {
-  return function() {
-    var input = getFile("input-" + type + ".js");
-    var output = esformatter.format(input, this.config);
-    var outputFile = getFile("output-" + type + ".js");
-    expect(output).to.eql(outputFile);
-  };
+function wrapWhenNecessaryTest(type) {
+  return compareTest(type);
 }
 
 function eclipseTest(type) {
+  return compareTest(type, "eclipse");
+}
+
+function alwaysWrapTest(type) {
+  return function() {
+    var wrappingStrategies = {};
+    wrappingStrategies[type] = "alwaysWrap";
+    this.config.autoWrap.wrappingStrategies = wrappingStrategies;
+    this.config.autoWrap.eclipseCompatible = false;
+    compareTest(type, "always").call(this);
+  };
+}
+
+function compareTest(type, qualifier) {
   return function() {
     var input = getFile("input-" + type + ".js");
-    var outputFile = getFile("output-eclipse-" + type + ".js");
+
+    var outputName = "output-";
+    if (qualifier !== undefined) {
+      outputName += qualifier + "-";
+    }
+    outputName += type + ".js";
+    var outputFile = getFile(outputName);
     if (outputFile !== undefined) {
       var output = esformatter.format(input, this.config);
       expect(output).to.eql(outputFile);

@@ -13,7 +13,14 @@ var _indent = require("rocambole-indent");
 var options;
 var defaultOptions = {
   maxLineLength : 120,
-  eclipseCompatible : true
+  eclipseCompatible : true,
+  wrappingStrategies : {
+    CallExpression : "wrapWhenNecessary",
+    FunctionExpression : "wrapWhenNecessary",
+    ArrayExpression : "wrapWhenNecessary",
+    BinaryExpression : "wrapWhenNecessary",
+    LogicalExpression : "wrapWhenNecessary"
+  }
 };
 
 module.exports = {
@@ -22,6 +29,15 @@ module.exports = {
     _ws.setOptions(opts && opts.whiteSpace);
     _lb.setOptions(opts && opts.lineBreak);
     _indent.setOptions(opts && opts.indent);
+    var wrappingStrategies = {
+      "wrapWhenNecessary" : wrapWhenNecessary,
+      "alwaysWrap" : alwaysWrap
+    };
+    for (var expression in options.wrappingStrategies) {
+      if (options.wrappingStrategies[expression] in wrappingStrategies) {
+        config[expression].wrappingStrategy = wrappingStrategies[options.wrappingStrategies[expression]];
+      }
+    }
   },
 
   nodeBefore : (node) => {
@@ -207,6 +223,10 @@ function wrapWhenNecessary(node, token, currentIndentLevel) {
 function alwaysWrap(node, token, currentIndentLevel) {
   var nextElement = config[node.type].nextElement;
   var element = nextElement(node);
+  // don't wrap first element
+  if (!options.eclipseCompatible) {
+    element = nextElement(node, element);
+  }
   var lastToken;
   while (element !== undefined) {
     if (element.startToken.prev.type !== "Indent") {
