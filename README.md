@@ -1,4 +1,4 @@
-# esformatter-collapse-objects
+# esformatter-auto-wrap
 
 [esformatter](https://github.com/millermedeiros/esformatter) plugin for
 automagically wrap line when they are over a configurable length.
